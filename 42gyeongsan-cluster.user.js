@@ -48,7 +48,8 @@
       top: 0;
       background: #1a1a1a;
       z-index: 1;
-      padding-top: 20px;
+      padding-top: 14px;
+      padding-bottom: 4px;
     }
     #c42-header {
       display: flex; align-items: center; gap: 12px; margin-bottom: 6px;
@@ -101,7 +102,7 @@
     .c42-default-btn.active { background: #00babc22; border-color: #00babc; color: #00babc; font-weight: bold; }
 
     .c42-svg-wrap { display: none; }
-    .c42-svg-wrap.active { display: block; margin-top:10vw;}
+    .c42-svg-wrap.active { display: block; }
 
     #c42-tooltip {
       position: fixed; background: rgba(20,20,20,0.93);
@@ -183,11 +184,51 @@
     }
 
     #c42-legend {
-      display: flex; gap: 16px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 16px; margin-bottom: 10px;
       font-family: Helvetica, Arial, sans-serif; font-size: 14px; color: #666;
     }
     .c42-leg { display: flex; align-items: center; gap: 6px; }
     .c42-dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #555; }
+
+    #c42-friends-toggle {
+      background: none; border: 1px solid #444; color: #888;
+      border-radius: 6px; padding: 4px 12px; font-size: 13px;
+      cursor: pointer; font-family: Helvetica, Arial, sans-serif;
+      transition: all .15s;
+    }
+    #c42-friends-toggle:hover { border-color: #ffaa00; color: #ffaa00; }
+    #c42-friends-toggle.open { border-color: #ffaa00; color: #ffaa00; }
+    #c42-friends-list {
+      display: none;
+      position: fixed;
+      min-width: 160px; max-height: 60vh; overflow-y: auto;
+      background: #1a1a1a; border: 1px solid #444;
+      border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 100001;
+    }
+    #c42-friends-list-title { display: none; }
+    .c42-friend-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; font-family: Helvetica, Arial, sans-serif;
+    }
+    .c42-friend-item.online { cursor: pointer; }
+    .c42-friend-item.online:hover { background: #242424; }
+    .c42-friend-item img {
+      width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    }
+    .c42-friend-item-name {
+      flex: 1; font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .c42-friend-item-name.offline { color: #555; }
+    .c42-friend-remove {
+      background: none; border: none; color: #ffaa00; font-size: 14px;
+      cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
+    }
+    .c42-friend-remove:hover { color: #888; }
+    #c42-friends-empty {
+      text-align: center; color: #555; padding: 16px 12px;
+      font-size: 13px; font-family: Helvetica, Arial, sans-serif;
+    }
   `;
   document.head.appendChild(style);
 
@@ -1135,12 +1176,14 @@
 		<div id="c42-legend">
 			<div class="c42-leg"><div class="c42-dot" style="background:#e5e5e5"></div>빈 자리</div>
 			<div class="c42-leg"><div class="c42-dot" style="background:#00babc;border-color:#009fa1"></div>사용 중</div>
+			<button id="c42-friends-toggle" style="margin-left:auto">친구 목록 <span id="c42-friends-count">0</span></button>
 		</div>
 	  </div>
 	  <div class="c42-svg-wrap active" data-cluster="c1">${svgC1}</div>
 	  <div class="c42-svg-wrap" data-cluster="c2">${svgC2}</div>
 	  <div class="c42-svg-wrap" data-cluster="c3">${svgC3}</div>
-    </div>`;
+    </div>
+    <div id="c42-friends-list"></div>`;
   document.body.appendChild(overlay);
 
   const btn = document.createElement('button');
@@ -1246,6 +1289,7 @@
 
   /* ── 친구 목록 ── */
   let friends = new Set(JSON.parse(localStorage.getItem('c42-friends') || '[]'));
+  let photoMap = new Map(); // login → imageUrl
 
   function saveFriends() {
     localStorage.setItem('c42-friends', JSON.stringify([...friends]));
@@ -1263,7 +1307,82 @@
     for (const [login, { rect }] of seatMap) {
       if (friends.has(login)) rect.classList.add('c42-seat-friend');
     }
+    renderFriendsList();
   }
+
+  function goToSeat(login, { rect, cluster }) {
+    switchTab(cluster);
+    overlay.querySelectorAll('.c42-seat-found').forEach(el => el.classList.remove('c42-seat-found'));
+    overlay.querySelectorAll('.c42-search-arrow').forEach(el => el.remove());
+    rect.classList.add('c42-seat-found');
+    const svg = overlay.querySelector(`#c42-svg-${cluster}`);
+    const arrow = document.createElementNS(NS, 'text');
+    arrow.setAttribute('x', String(+rect.getAttribute('x') + +rect.getAttribute('width') / 2));
+    arrow.setAttribute('y', String(+rect.getAttribute('y') - 2));
+    arrow.setAttribute('text-anchor', 'middle');
+    arrow.classList.add('c42-search-arrow');
+    arrow.textContent = '▼';
+    svg.appendChild(arrow);
+    const panel = document.getElementById('c42-panel');
+    const svgWrap = overlay.querySelector(`.c42-svg-wrap[data-cluster="${cluster}"]`);
+    panel.scrollTop = svgWrap.offsetTop - panel.offsetTop;
+  }
+
+  function renderFriendsList() {
+    const countEl = document.getElementById('c42-friends-count');
+    const list = document.getElementById('c42-friends-list');
+    if (countEl) countEl.textContent = friends.size;
+    if (!list || list.style.display === 'none') return;
+
+    list.innerHTML = '<div id="c42-friends-list-title">친구 목록</div>';
+    if (friends.size === 0) {
+      list.innerHTML += '<div id="c42-friends-empty">친구가 없습니다</div>';
+      return;
+    }
+
+    for (const login of [...friends].sort()) {
+      const entry = seatMap.get(login);
+      const item = document.createElement('div');
+      item.className = 'c42-friend-item' + (entry ? ' online' : '');
+
+      const imageUrl = photoMap.get(login);
+      if (imageUrl) {
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        item.appendChild(img);
+      }
+
+      const name = document.createElement('span');
+      name.className = 'c42-friend-item-name' + (entry ? '' : ' offline');
+      name.textContent = login;
+      item.appendChild(name);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'c42-friend-remove';
+      removeBtn.textContent = '★';
+      removeBtn.title = '친구 해제';
+      removeBtn.addEventListener('click', e => { e.stopPropagation(); toggleFriend(login); });
+      item.appendChild(removeBtn);
+
+      if (entry) item.addEventListener('click', () => goToSeat(login, entry));
+      list.appendChild(item);
+    }
+  }
+
+  const friendsToggle = document.getElementById('c42-friends-toggle');
+  const friendsList = document.getElementById('c42-friends-list');
+  friendsToggle.addEventListener('click', () => {
+    const isOpen = friendsList.style.display !== 'none';
+    if (!isOpen) {
+      const r = friendsToggle.getBoundingClientRect();
+      friendsList.style.left = '';
+      friendsList.style.right = (window.innerWidth - r.right) + 'px';
+      friendsList.style.top = (r.bottom + 4) + 'px';
+    }
+    friendsList.style.display = isOpen ? 'none' : 'block';
+    friendsToggle.classList.toggle('open', !isOpen);
+    if (!isOpen) renderFriendsList();
+  });
 
   /* ── 내 자리 ── */
   let myLogin = localStorage.getItem('c42-my-login') || null;
@@ -1337,6 +1456,7 @@
   }
 
   function injectImage(svg, rect, login, imageUrl) {
+    photoMap.set(login, imageUrl);
     const x = +rect.getAttribute('x');
     const y = +rect.getAttribute('y');
     const w = +rect.getAttribute('width');
@@ -1380,6 +1500,7 @@
 
     clearSeatImages();
     seatMap.clear();
+    photoMap.clear();
     overlay.querySelectorAll('rect[id^="c1r"], rect[id^="c2r"], rect[id^="c3r"]').forEach(r => r.setAttribute('fill', EMPTY));
 
     GM_xmlhttpRequest({
