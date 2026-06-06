@@ -192,7 +192,7 @@
 
     #c42-friends-toggle {
       background: none; border: 1px solid #444; color: #888;
-      border-radius: 6px; padding: 4px 12px; font-size: 13px;
+      border-radius: 6px; padding: 6px 16px; font-size: 14px;
       cursor: pointer; font-family: Helvetica, Arial, sans-serif;
       transition: all .15s;
     }
@@ -1330,8 +1330,12 @@
     arrow.textContent = '▼';
     svg.appendChild(arrow);
     const panel = document.getElementById('c42-panel');
-    const svgWrap = overlay.querySelector(`.c42-svg-wrap[data-cluster="${cluster}"]`);
-    panel.scrollTop = svgWrap.offsetTop - panel.offsetTop;
+    const panelInside = document.getElementById('c42-panel-inside');
+    const headerH = panelInside.offsetHeight;
+    const rectBox = rect.getBoundingClientRect();
+    const panelBox = panel.getBoundingClientRect();
+    const rectCenterInPanel = rectBox.top - panelBox.top + panel.scrollTop + rectBox.height / 2;
+    panel.scrollTop = rectCenterInPanel - headerH - (panel.clientHeight - headerH) / 2;
   }
 
   function renderFriendsList() {
@@ -1398,7 +1402,20 @@
     }
     friendsList.style.display = isOpen ? 'none' : 'block';
     friendsToggle.classList.toggle('open', !isOpen);
+    if (isOpen) {
+      overlay.querySelectorAll('.c42-seat-found').forEach(el => el.classList.remove('c42-seat-found'));
+      overlay.querySelectorAll('.c42-search-arrow').forEach(el => el.remove());
+    }
     if (!isOpen) renderFriendsList();
+  });
+
+  document.addEventListener('click', e => {
+    if (friendsList.style.display === 'none') return;
+    if (friendsToggle.contains(e.target) || friendsList.contains(e.target)) return;
+    friendsList.style.display = 'none';
+    friendsToggle.classList.remove('open');
+    overlay.querySelectorAll('.c42-seat-found').forEach(el => el.classList.remove('c42-seat-found'));
+    overlay.querySelectorAll('.c42-search-arrow').forEach(el => el.remove());
   });
 
   /* ── 내 자리 ── */
@@ -1527,7 +1544,6 @@
 
     clearSeatImages();
     seatMap.clear();
-    photoMap.clear();
     overlay.querySelectorAll('rect[id^="c1r"], rect[id^="c2r"], rect[id^="c3r"]').forEach(r => r.setAttribute('fill', EMPTY));
 
     GM_xmlhttpRequest({
