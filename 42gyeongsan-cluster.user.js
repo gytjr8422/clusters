@@ -220,6 +220,11 @@
       flex: 1; font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .c42-friend-item-name.offline { color: #555; }
+    .c42-online-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: #4caf50;
+      margin-left: 6px; vertical-align: middle; flex-shrink: 0;
+    }
     .c42-friend-remove {
       background: none; border: none; color: #ffaa00; font-size: 14px;
       cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
@@ -1289,7 +1294,7 @@
 
   /* ── 친구 목록 ── */
   let friends = new Set(JSON.parse(localStorage.getItem('c42-friends') || '[]'));
-  let photoMap = new Map(); // login → imageUrl
+  let photoMap = new Map(Object.entries(JSON.parse(localStorage.getItem('c42-photos') || '{}')));
 
   function saveFriends() {
     localStorage.setItem('c42-friends', JSON.stringify([...friends]));
@@ -1299,6 +1304,7 @@
     if (friends.has(login)) friends.delete(login);
     else friends.add(login);
     saveFriends();
+    savePhotos();
     applyFriends();
   }
 
@@ -1340,7 +1346,13 @@
       return;
     }
 
-    for (const login of [...friends].sort()) {
+    const sorted = [...friends].sort((a, b) => {
+      const ao = seatMap.has(a), bo = seatMap.has(b);
+      if (ao !== bo) return ao ? -1 : 1;
+      return a.localeCompare(b);
+    });
+
+    for (const login of sorted) {
       const entry = seatMap.get(login);
       const item = document.createElement('div');
       item.className = 'c42-friend-item' + (entry ? ' online' : '');
@@ -1355,6 +1367,11 @@
       const name = document.createElement('span');
       name.className = 'c42-friend-item-name' + (entry ? '' : ' offline');
       name.textContent = login;
+      if (entry) {
+        const dot = document.createElement('span');
+        dot.className = 'c42-online-dot';
+        name.appendChild(dot);
+      }
       item.appendChild(name);
 
       const removeBtn = document.createElement('button');
@@ -1455,8 +1472,18 @@
     overlay.querySelectorAll('[id^="c42-clip-"]').forEach(el => el.remove());
   }
 
+  function savePhotos() {
+    const obj = {};
+    for (const login of friends) {
+      const url = photoMap.get(login);
+      if (url) obj[login] = url;
+    }
+    localStorage.setItem('c42-photos', JSON.stringify(obj));
+  }
+
   function injectImage(svg, rect, login, imageUrl) {
     photoMap.set(login, imageUrl);
+    if (friends.has(login)) savePhotos();
     const x = +rect.getAttribute('x');
     const y = +rect.getAttribute('y');
     const w = +rect.getAttribute('width');
