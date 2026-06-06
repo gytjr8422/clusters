@@ -40,13 +40,15 @@
 
     #c42-panel {
       background: #1a1a1a; border-radius: 14px;
-      padding: 20px 20px 16px; position: relative;
+      padding: 0 20px 16px; position: relative;
       max-width: 95vw; max-height: 95vh; overflow: auto;
     }
     #c42-panel-inside {
-      position: fixed;
-      max-width: 92vw;
-      width: 100%;
+      position: sticky;
+      top: 0;
+      background: #1a1a1a;
+      z-index: 1;
+      padding-top: 20px;
     }
     #c42-header {
       display: flex; align-items: center; gap: 12px; margin-bottom: 6px;
