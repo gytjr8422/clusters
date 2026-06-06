@@ -219,7 +219,7 @@
     .c42-friend-item-name {
       flex: 1; font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .c42-friend-item-name.offline { color: #555; }
+    .c42-friend-item-name.offline { color: #888; }
     .c42-online-dot {
       display: inline-block; width: 7px; height: 7px;
       border-radius: 50%; background: #4caf50;
