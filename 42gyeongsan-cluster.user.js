@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         42 경산 클러스터 지도
 // @namespace    https://meta.intra.42.fr/
-// @version      2.11
+// @version      2.12
 // @description  42 경산 c1/c2/c3 클러스터 실시간 배치도 — 우측 하단 버튼
 // @updateURL    https://raw.githubusercontent.com/gytjr8422/clusters/main/42gyeongsan-cluster.user.js
 // @downloadURL  https://raw.githubusercontent.com/gytjr8422/clusters/main/42gyeongsan-cluster.user.js
@@ -122,11 +122,15 @@
       margin-top: 6px; white-space: nowrap;
     }
     #c42-tooltip-star {
-      background: none; border: none; color: #555; font-size: 20px;
-      cursor: pointer; padding: 2px 0 0; display: block;
-      width: 100%; text-align: center; line-height: 1;
+      background: none; border: none; font-size: 34px;
+      cursor: pointer; padding: 4px 0 0; display: flex;
+      align-items: center; justify-content: center; gap: 4px;
+      width: 100%; line-height: 1; color: #ffaa00;
     }
-    #c42-tooltip-star:hover { color: #ffaa00; }
+    #c42-tooltip-star .c42-star-icon { color: #ffaa00 !important; display: inline !important; margin-top: 0; vertical-align: middle; }
+    #c42-tooltip-star .c42-star-label { font-size: 11px; color: #888 !important; display: inline !important; margin-top: 0; vertical-align: middle; }
+    #c42-tooltip-star:hover { color: #ffd04d; }
+    #c42-tooltip-star:hover .c42-star-label { color: #bbb; }
     #c42-tooltip-star.active { color: #ffaa00; }
     .c42-seat-img { cursor: pointer; }
 
@@ -153,7 +157,7 @@
     #c42-search {
       width: 100%; box-sizing: border-box; margin-bottom: 10px;
       background: #2a2a2a; border: 1px solid #444; color: #ccc;
-      border-radius: 6px; padding: 6px 10px; font-size: 14px;
+      border-radius: 6px; padding: 9px 10px; font-size: 14px;
       font-family: Helvetica, Arial, sans-serif; outline: none;
     }
     #c42-search:focus { border-color: #00babc; }
@@ -194,7 +198,7 @@
 
     #c42-friends-toggle {
       background: none; border: 1px solid #444; color: #888;
-      border-radius: 6px; padding: 6px 16px; font-size: 14px;
+      border-radius: 6px; padding: 8px 20px; font-size: 15px;
       cursor: pointer; font-family: Helvetica, Arial, sans-serif;
       transition: all .15s;
     }
@@ -203,32 +207,32 @@
     #c42-friends-list {
       display: none;
       position: fixed;
-      min-width: 160px; max-height: 60vh; overflow-y: auto;
+      min-width: 200px; max-height: 70vh; overflow-y: auto;
       background: #1a1a1a; border: 1px solid #444;
       border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       z-index: 100001;
     }
     #c42-friends-list-title { display: none; }
     .c42-friend-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 12px; font-family: Helvetica, Arial, sans-serif;
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; font-family: Helvetica, Arial, sans-serif;
     }
     .c42-friend-item.online { cursor: pointer; }
     .c42-friend-item.online:hover { background: #242424; }
     .c42-friend-item img {
-      width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
     }
     .c42-friend-item-name {
-      flex: 1; font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1; font-size: 15px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .c42-friend-item-name.offline { color: #888; }
     .c42-online-dot {
-      display: inline-block; width: 7px; height: 7px;
+      display: inline-block; width: 8px; height: 8px;
       border-radius: 50%; background: #4caf50;
       margin-left: 6px; vertical-align: middle; flex-shrink: 0;
     }
     .c42-friend-remove {
-      background: none; border: none; color: #ffaa00; font-size: 14px;
+      background: none; border: none; color: #ffaa00; font-size: 18px;
       cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
     }
     .c42-friend-remove:hover { color: #888; }
@@ -1224,13 +1228,21 @@
       : `<span>${login}</span>`;
     const star = document.createElement('button');
     star.id = 'c42-tooltip-star';
-    star.textContent = isFriend ? '★' : '☆';
     if (isFriend) star.classList.add('active');
+    const starIcon = document.createElement('span');
+    starIcon.className = 'c42-star-icon';
+    starIcon.textContent = isFriend ? '★' : '☆';
+    const starLabel = document.createElement('span');
+    starLabel.className = 'c42-star-label';
+    starLabel.textContent = isFriend ? '친구 해제' : '친구 추가';
+    star.appendChild(starIcon);
+    star.appendChild(starLabel);
     star.addEventListener('click', e => {
       e.stopPropagation();
       toggleFriend(login);
       const now = friends.has(login);
-      star.textContent = now ? '★' : '☆';
+      starIcon.textContent = now ? '★' : '☆';
+      starLabel.textContent = now ? '친구 해제' : '친구 추가';
       star.classList.toggle('active', now);
     });
     tooltip.appendChild(star);
