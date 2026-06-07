@@ -158,6 +158,7 @@
     }
     #c42-search:focus { border-color: #00babc; }
     #c42-search::placeholder { color: #555; }
+    #c42-search-status { font-size: 14px; color: #e53935; margin-top: -6px; margin-bottom: 6px; min-height: 0; font-family: Helvetica, Arial, sans-serif; }
     .c42-seat-found {
       stroke: #4fc3f7 !important; stroke-width: 2 !important;
     }
@@ -1179,6 +1180,7 @@
 			</div>
 		</div>
 		<input id="c42-search" type="text" placeholder="동료 검색…" autocomplete="off" spellcheck="false">
+		<div id="c42-search-status"></div>
 		<div id="c42-legend">
 			<div class="c42-leg"><div class="c42-dot" style="background:#e5e5e5"></div>빈 자리</div>
 			<div class="c42-leg"><div class="c42-dot" style="background:#00babc;border-color:#009fa1"></div>사용 중</div>
@@ -1317,6 +1319,16 @@
     renderFriendsList();
   }
 
+  function scrollToRect(rect) {
+    const panel = document.getElementById('c42-panel');
+    const panelInside = document.getElementById('c42-panel-inside');
+    const headerH = panelInside.offsetHeight;
+    const rectBox = rect.getBoundingClientRect();
+    const panelBox = panel.getBoundingClientRect();
+    const rectCenterInPanel = rectBox.top - panelBox.top + panel.scrollTop + rectBox.height / 2;
+    panel.scrollTop = rectCenterInPanel - headerH - (panel.clientHeight - headerH) / 2;
+  }
+
   function goToSeat(login, { rect, cluster }) {
     switchTab(cluster);
     overlay.querySelectorAll('.c42-seat-found').forEach(el => el.classList.remove('c42-seat-found'));
@@ -1330,13 +1342,7 @@
     arrow.classList.add('c42-search-arrow');
     arrow.textContent = '▼';
     svg.appendChild(arrow);
-    const panel = document.getElementById('c42-panel');
-    const panelInside = document.getElementById('c42-panel-inside');
-    const headerH = panelInside.offsetHeight;
-    const rectBox = rect.getBoundingClientRect();
-    const panelBox = panel.getBoundingClientRect();
-    const rectCenterInPanel = rectBox.top - panelBox.top + panel.scrollTop + rectBox.height / 2;
-    panel.scrollTop = rectCenterInPanel - headerH - (panel.clientHeight - headerH) / 2;
+    scrollToRect(rect);
   }
 
   function renderFriendsList() {
@@ -1462,9 +1468,10 @@
   function applySearch() {
     overlay.querySelectorAll('.c42-seat-found').forEach(el => el.classList.remove('c42-seat-found'));
     overlay.querySelectorAll('.c42-search-arrow').forEach(el => el.remove());
+    const statusEl = document.getElementById('c42-search-status');
     const q = searchInput.value.trim().toLowerCase();
-    if (!q) return;
-    let firstCluster = null;
+    if (!q) { statusEl.textContent = ''; return; }
+    let firstEntry = null;
     for (const [login, { rect, cluster }] of seatMap) {
       if (login.toLowerCase().includes(q)) {
         rect.classList.add('c42-seat-found');
@@ -1476,10 +1483,16 @@
         arrow.classList.add('c42-search-arrow');
         arrow.textContent = '▼';
         svg.appendChild(arrow);
-        if (!firstCluster) firstCluster = cluster;
+        if (!firstEntry) firstEntry = { rect, cluster };
       }
     }
-    if (firstCluster) switchTab(firstCluster);
+    if (firstEntry) {
+      statusEl.textContent = '';
+      switchTab(firstEntry.cluster);
+      scrollToRect(firstEntry.rect);
+    } else {
+      statusEl.textContent = '검색 결과가 없습니다.';
+    }
   }
 
   searchInput.addEventListener('input', applySearch);
