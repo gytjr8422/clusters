@@ -42,6 +42,7 @@
       background: #1a1a1a; border-radius: 14px;
       padding: 0 20px 16px; position: relative;
       max-width: 95vw; max-height: 95vh; overflow: auto;
+      overflow-x: hidden;
     }
     #c42-panel-inside {
       position: sticky;
